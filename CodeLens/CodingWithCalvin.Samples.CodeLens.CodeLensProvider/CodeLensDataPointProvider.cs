@@ -2,6 +2,7 @@
 using System.ComponentModel.Composition;
 using System.Threading;
 using System.Threading.Tasks;
+using CodingWithCalvin.Samples.CodeLens.Shared;
 using Microsoft.VisualStudio.Language.CodeLens;
 using Microsoft.VisualStudio.Language.CodeLens.Remoting;
 using Microsoft.VisualStudio.Language.Intellisense;
@@ -33,15 +34,39 @@ namespace CodingWithCalvin.Samples.CodeLens.CodeLensProvider
             return Task.FromResult(methodsOnly);
         }
 
-        public Task<IAsyncCodeLensDataPoint> CreateDataPointAsync(
+        /// <summary>
+        /// Responsible for creating the actual datapoint and setting up two-way communication over RPC back to the in-process extension
+        /// </summary>
+        public async Task<IAsyncCodeLensDataPoint> CreateDataPointAsync(
             CodeLensDescriptor descriptor,
             CodeLensDescriptorContext descriptorContext,
             CancellationToken token
         )
         {
-            return Task.FromResult<IAsyncCodeLensDataPoint>(
-                new CodeLensDataPoint(descriptor, _callbackService.Value)
-            );
+            var dataPoint = new CodeLensDataPoint(descriptor, _callbackService.Value);
+
+            var vsPid = await _callbackService
+                .Value.InvokeAsync<int>(
+                    this,
+                    nameof(IMyCodeLensCallbackService.GetVisualStudioPid),
+                    cancellationToken: token
+                )
+                .ConfigureAwait(false);
+
+            _ = _callbackService
+                .Value.InvokeAsync(
+                    this,
+                    nameof(IMyCodeLensCallbackService.InitializeRpcAsync),
+                    new[] { dataPoint.DataPointId },
+                    token
+                )
+                .ConfigureAwait(false);
+
+            var connection = new VisualStudioConnection(dataPoint, vsPid);
+            await connection.ConnectAsync(token);
+            dataPoint.VsConnection = connection;
+
+            return dataPoint;
         }
     }
 }

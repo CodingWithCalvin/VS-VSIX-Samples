@@ -42,7 +42,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="IMyCodeLensCallbackService.cs" />
+    <Compile Include="IRemoteCodeLens.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RpcPipeNames.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

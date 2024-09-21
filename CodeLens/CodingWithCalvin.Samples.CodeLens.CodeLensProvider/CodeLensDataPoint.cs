@@ -8,9 +8,12 @@ using Microsoft.VisualStudio.Threading;
 
 namespace CodingWithCalvin.Samples.CodeLens.CodeLensProvider
 {
-    internal class CodeLensDataPoint : IAsyncCodeLensDataPoint
+    public class CodeLensDataPoint : IAsyncCodeLensDataPoint
     {
         private readonly ICodeLensCallbackService _callbackService;
+        public readonly string DataPointId = Guid.NewGuid().ToString();
+
+        public VisualStudioConnection VsConnection;
 
         public CodeLensDataPoint(
             CodeLensDescriptor descriptor,
@@ -26,18 +29,19 @@ namespace CodingWithCalvin.Samples.CodeLens.CodeLensProvider
             CancellationToken token
         )
         {
-            var vsPid = await _callbackService
-                .InvokeAsync<int>(
+            var currentDateTime = await _callbackService
+                .InvokeAsync<DateTime>(
                     this,
-                    nameof(IMyCodeLensCallbackService.GetVisualStudioPid),
+                    nameof(IMyCodeLensCallbackService.GetCurrentDateTime),
                     cancellationToken: token
                 )
                 .ConfigureAwait(false);
 
             return new CodeLensDataPointDescriptor
             {
-                Description = $"The Visual Studio PID is {vsPid}!",
-                TooltipText = $"Shows Up On Hover, show it here, too! - VS PID = {vsPid}",
+                Description = $"The Current DateTime is {currentDateTime.ToLongDateString()}!",
+                TooltipText =
+                    $"Shows Up On Hover, show it here, too! - Current DateTime = {currentDateTime.ToLongTimeString()}",
             };
         }
 
@@ -52,5 +56,8 @@ namespace CodingWithCalvin.Samples.CodeLens.CodeLensProvider
 
         public CodeLensDescriptor Descriptor { get; }
         public event AsyncEventHandler InvalidatedAsync;
+
+        public void Refresh() =>
+            _ = InvalidatedAsync?.InvokeAsync(this, EventArgs.Empty).ConfigureAwait(false);
     }
 }
